@@ -53,13 +53,13 @@ def cal_img_in_dir2csv(dir_path, name_out):
 
             if filetype.is_image(img):
                 non = 0
-                dense = calculateData(str(img))
+                dense = round(calculateData(str(img)), 2)
 
                 extract = extract_name(filename)
-                writer.writerow([filename]+extract+dense)
+                writer.writerow([filename]+extract+[dense])
                 
                 compute_time = round((time.time() - start_time_local)*1000)
-                print(f"{str(round(n/n_img*100))}% {compute_time} ms. {filename} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense[0]}%")
+                print(f"{str(round(n/n_img*100))}% {compute_time} ms. {filename} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense}%")
 
                 start_time_local = time.time()
 
@@ -86,13 +86,13 @@ def cal_img2csv(img_path, name_out):
         writer = csv.writer(file_csv)
         writer.writerow(["File name", "Model (L)", "Rate (L/rai)", "Speed (m/s)", 
                             "Altitude (m)", "Distance (cm)", "dense (%)"])
-        dense = calculateData(str(img_path))
+        dense = round(calculateData(str(img_path)), 2)
         extract = extract_name(img_name)
-        writer.writerow([img_name]+extract+dense)
+        writer.writerow([img_name]+extract+[dense])
         file_csv.close()
         
     compute_time = round((time.time() - start_time)*1000)
-    print(f"{compute_time} ms. {img_name} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense[0]}%")
+    print(f"{compute_time} ms. {img_name} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense}%")
 
 
 def calculateData(file):
@@ -102,14 +102,8 @@ def calculateData(file):
     threshould_value = 179
     threshould = cv2.threshold(gray, threshould_value, 255,cv2.THRESH_BINARY_INV)[1]
     bin_img_threshould = 1 - (threshould / 255.0)
-    # gaussian = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 21, 4)
-    # bin_img_gaussian = 1 - (gaussian / 255.0)
-    # mean_c = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY_INV, 21, 4)
-    # bin_img_mean_c = 1 - (mean_c / 255.0)
     threshould_dense = round(sum(bin_img_threshould.flatten() == 0)/ (w*h) * 100, 2)
-    # gaussian_dense = round(sum(bin_img_gaussian.flatten() == 0)/ (w*h) * 100, 2)
-    # mean_c_dense = round(sum(bin_img_mean_c.flatten() == 0)/ (w*h) * 100, 2)
-    return [threshould_dense]
+    return threshould_dense
 
 
 def run(in_path):
@@ -135,5 +129,3 @@ def loop_folder(in_path):
 
     print(f"<<<<<<<<<<<<<<<<<<<<<<{in_path}>>>>>>>>>>>>>>>>>>>>>>")
     run(in_path)
-
-
