@@ -31,42 +31,49 @@ def check_csv_name(dir_path, name_out):
             new_name_out = name_out + "_" + str(n)
             n += 1
         
-        else: return new_name_out + '.csv'
+        else: 
+            return new_name_out + '.csv'
 
 
-def cal_img_in_dir2csv(dir_path, name_out):
+def cal_img_in_dir2csv(dir_path, save_result):
+    name_out = dir_path.name
     ls_img = os.listdir(dir_path)
     n_img = len(ls_img) - 1
     start_time_global = time.time()
     start_time_local = start_time_global
     name_out = check_csv_name(dir_path, name_out)
 
-    with open(dir_path / name_out, 'w', newline='') as file_csv:
-        writer = csv.writer(file_csv)
-        writer.writerow(["File name", "Model (L)", "Rate (L/rai)", "Speed (m/s)", 
-                            "Altitude (m)", "Distance (cm)", "dense (%)"])
-        non = 1
+    non = 1
+    opened = 0
+    for n, filename in enumerate(ls_img):
+        if opened == 0 and save_result:
+            file_csv = open(dir_path / name_out, 'w', newline='')
+            writer = csv.writer(file_csv)
+            writer.writerow(["File name", "Model (L)", "Rate (L/rai)", "Speed (m/s)", 
+                                "Altitude (m)", "Distance (cm)", "dense (%)"])
+            opened = 1
+        
+        img = dir_path / filename
+        if os.path.isdir(img): continue
 
-        for n, filename in enumerate(ls_img):
-            img = dir_path / filename
-            if os.path.isdir(img): continue
+        if filetype.is_image(img):
+            non = 0
+            dense = round(calculateData(str(img)), 2)
 
-            if filetype.is_image(img):
-                non = 0
-                dense = round(calculateData(str(img)), 2)
-
-                extract = extract_name(filename)
+            extract = extract_name(filename)
+            if opened:
                 writer.writerow([filename]+extract+[dense])
-                
-                compute_time = round((time.time() - start_time_local)*1000)
-                print(f"{str(round(n/n_img*100))}% {compute_time} ms. {filename} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense}%")
+            
+            compute_time = round((time.time() - start_time_local)*1000)
+            print(f"{str(round(n/n_img*100))}% {compute_time} ms. {filename} (model {extract[0]}L, rate {extract[1]}, speed {extract[2]}, altitude {extract[3]}, distance {extract[4]}cm) : {dense}%")
+            start_time_local = time.time()
 
-                start_time_local = time.time()
-
+    if opened:
         file_csv.close()
 
-        if non: 
-            print("No image!")
+    if non: 
+        print("No image!")
+        if opened:
             os.remove(file_csv.name)
 
     all_time = time.time()-start_time_global
@@ -77,16 +84,17 @@ def cal_img_in_dir2csv(dir_path, name_out):
         print("========== run time in this folder:", round(all_time*1000), "ms. ==========")
 
 
-def cal_img2csv(img_path, name_out):
-    img_name = Path(img_path).name
+def cal_img2csv(img_path, save_result):
+    img_name = img_path.name
     start_time = time.time()
-    name_out = check_csv_name(img_path.parent, os.path.splitext(name_out)[0])
+    name_out = check_csv_name(img_path.parent, os.path.splitext(img_name)[0])
+    dense = round(calculateData(str(img_path)), 2)
     
-    with open(img_path.parent / name_out, 'w', newline='') as file_csv:
+    if save_result:
+        file_csv = open(img_path.parent / name_out, 'w', newline='')
         writer = csv.writer(file_csv)
         writer.writerow(["File name", "Model (L)", "Rate (L/rai)", "Speed (m/s)", 
                             "Altitude (m)", "Distance (cm)", "dense (%)"])
-        dense = round(calculateData(str(img_path)), 2)
         extract = extract_name(img_name)
         writer.writerow([img_name]+extract+[dense])
         file_csv.close()
@@ -106,26 +114,20 @@ def calculateData(file):
     return threshould_dense
 
 
-def run(in_path):
+def run(in_path, save_result):
     in_path = Path(in_path)
-    name_out = in_path.name
  
     if os.path.isdir(in_path): 
-        cal_img_in_dir2csv(in_path, name_out) 
+        cal_img_in_dir2csv(in_path, save_result) 
 
-    elif filetype.is_image(in_path):
-        cal_img2csv(in_path, name_out)
+    elif filetype.is_image(in_path, save_result):
+        cal_img2csv(in_path)
 
     else:
         print(in_path, "not image or directory")
 
 
-def loop_folder(in_path):
-    ls_folder = os.listdir(in_path)
-    for dir in ls_folder:
-        file_path = Path(in_path) / dir
-        if os.path.isdir(file_path):
-            loop_folder(file_path)
-
-    print(f"<<<<<<<<<<<<<<<<<<<<<<{in_path}>>>>>>>>>>>>>>>>>>>>>>")
-    run(in_path)
+def loop_folder(in_path, save):
+    for (root,dirs,files) in os.walk(in_path, topdown=True):
+        print(f"<<<<<<<<<<<<<<<<<<<<<<{root}>>>>>>>>>>>>>>>>>>>>>>")
+        run(root, save)
